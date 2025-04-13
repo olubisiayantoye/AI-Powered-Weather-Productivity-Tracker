@@ -1,0 +1,19 @@
+{
+  "name": "ai-powered-weather-productivity-tracker",
+  "version": "1.0.0",
+  "description": "ai-productivity-tracker/\r ├── public/\r │   └── json/                # (optional for mock data)\r ├── src/\r │   ├── index.html           # main app UI\r │   ├── css/\r │   │   └── styles.css\r │   └── js/\r │       ├── main.js          # entry point\r │       ├── api/\r │       │   ├── weatherAPI.mjs\r │       │   └── activityWatchAPI.mjs\r │       ├── modules/\r │       │   ├── dashboard.mjs\r │       │   ├── logbook.mjs\r │       │   └── aiAnalyzer.mjs\r │       └── utils/\r │           └── utils.mjs\r ├── vite.config.js\r ├── package.json\r └── README.md",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "vite": "^6.2.6"
+  }
+}
