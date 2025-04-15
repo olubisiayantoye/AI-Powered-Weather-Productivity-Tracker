@@ -1,0 +1,30 @@
+:root {
+    --primary: #00B4D8;
+    --secondary: #2D6A4F;
+    --background: #F1FAEE;
+    --text: #1D3557;
+    --card-bg: #FFFFFF;
+    --shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+
+   /* --bg-color: #f9fafb;
+    
+    --header-bg: #ffffff;
+    */
+    --text-color: #111827;
+    --nav-bg: #ffffff;
+    --primary-color: #2563eb;         /* Blue-600 */
+    --border-color: #e5e7eb;          /* Gray-200 */
+    --button-bg: #e0e7ff;             /* Indigo-100 */
+    --button-text: #1e3a8a;           /* Indigo-900 */
+    --button-hover-bg: #c7d2fe;       /* Indigo-200 */
+    --muted-color: #6b7280;           /* Gray-500 */
+}
+
+[data-theme="dark"] {
+    --primary: #00B4D8;
+    --secondary: #52B788;
+    --background: #1D3557;
+    --text: #F1FAEE;
+    --card-bg: #0F1C2E;
+    --shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+}

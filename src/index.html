@@ -1,19 +1,54 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>AI Productivity Tracker</title>
-  <link rel="stylesheet" href="./css/styles.css" />
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI-Powered Weather & Productivity Tracker</title>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@700&family=Inter:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/styles/themes.css">
+    <link rel="stylesheet" href="/styles/main.css">
+    <link rel="icon" href="/favicon.ico" type="image/x-icon">
 </head>
 <body>
-  <header>
-    <h1>AI-Powered Weather & Productivity Tracker</h1>
-  </header>
-  <main id="app">
-    <p>Loading dashboard...</p>
-  </main>
-  <footer>&copy; 2025 • Built for WDD330</footer>
-  <script type="module" src="./js/main.js"></script>
+    
+    <header class="app-header">
+        <h1 class="app-title">AI-Powered Weather & Productivity Tracker</h1>
+    </header>
+
+    <nav class="main-nav">
+        <div class="nav-container">
+            <button id="nav-dashboard" class="nav-button">Dashboard</button>
+            <button id="nav-logbook" class="nav-button">Logbook</button>
+            <button id="nav-insights" class="nav-button">Insights</button>
+            <button id="nav-settings" class="nav-button">Settings</button>
+        </div>
+    </nav>
+
+    <main id="app" class="app-container">
+        <!-- Dynamic content will be loaded here -->
+        <div class="loading-message">Loading application...</div>
+    </main>
+
+    <script type="module" src="/modules/main.js"></script>
+    <script type="module">
+        // Navigation setup
+        document.getElementById('nav-dashboard').addEventListener('click', () => {
+            import('./modules/dashboardView.mjs').then(module => module.initializeDashboard());
+        });
+        
+        document.getElementById('nav-logbook').addEventListener('click', () => {
+            import('./modules/logbookView.mjs').then(module => module.renderLogbook());
+        });
+        
+        document.getElementById('nav-insights').addEventListener('click', () => {
+            import('./modules/insightFeed.mjs').then(module => {
+                module.generateInsights().then(insights => module.displayInsights(insights));
+            });
+        });
+
+        document.getElementById('nav-settings').addEventListener('click', () => {
+            import('./modules/settingsView.mjs').then(module => module.renderSettings());
+        });
+    </script>
 </body>
 </html>

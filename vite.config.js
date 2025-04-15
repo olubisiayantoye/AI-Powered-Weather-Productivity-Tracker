@@ -1,10 +1,24 @@
 import { defineConfig } from 'vite';
+import { resolve } from 'path';
 
 export default defineConfig({
-  root: 'src',
-  envDir: '..', // 👈 Tells Vite to look for .env in the parent/root folder
-  build: {
-    outDir: '../dist',
-    emptyOutDir: true,
-  },
+    envDir: resolve(__dirname), // Critical fix
+    root: resolve(__dirname, 'src'),
+    publicDir: resolve(__dirname, 'public'),
+    build: {
+        outDir: resolve(__dirname, 'dist'),
+        emptyOutDir: true,
+        rollupOptions: {
+            input: {
+                main: resolve(__dirname, 'src/index.html')
+            }
+        }
+    },
+    server: {
+        port: 5173
+    },
+    optimizeDeps: {
+        include: ['localforage', 'axios']
+    },
+   
 });
