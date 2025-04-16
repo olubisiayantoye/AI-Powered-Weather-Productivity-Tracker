@@ -1,96 +1,232 @@
 import { getStoredData } from './utils.mjs';
 
-// Free-tier AI APIs (optional)
-const COHERE_API_KEY = import.meta.env.VITE_COHERE_API_KEY;
-const HF_API_KEY = import.meta.env.VITE_HF_API_KEY;
+// API Configuration
+const AI_CONFIG = {
+  cohere: {
+    apiKey: import.meta.env.VITE_COHERE_API_KEY,
+    endpoint: "https://api.cohere.ai/v1/generate",
+    model: "command"
+  },
+  huggingface: {
+    apiKey: import.meta.env.VITE_HF_API_KEY,
+    endpoint: "https://api-inference.huggingface.co/models/gpt2"
+  }
+};
 
+// Main Exports
 export async function generateInsights() {
-    const weatherData = await getStoredData('weatherHistory') || [];
-    const productivityData = await getStoredData('productivityHistory') || [];
-    
+  try {
+    const [weatherData, productivityData] = await Promise.all([
+      getStoredData('weatherHistory') || [],
+      getStoredData('productivityHistory') || []
+    ]);
+
     if (weatherData.length < 3 || productivityData.length < 3) {
-        return { 
-            message: "Collect more data to generate insights", 
-            tips: ["Use the app for a few days to see patterns"] 
-        };
+      return insufficientDataResponse();
     }
-    
-    const correlations = findCorrelations(weatherData, productivityData);
-    return formatInsights(correlations);
+
+    return formatInsights(
+      findCorrelations(weatherData, productivityData)
+    );
+  } catch (error) {
+    console.error("Insight generation failed:", error);
+    return fallbackResponse("Error generating insights");
+  }
 }
 
 export async function analyzePomodoroSessions() {
-    const pomodoroData = await getStoredData('pomodoroHistory') || [];
-    const weatherData = await getStoredData('weatherHistory') || [];
-    
-    if (pomodoroData.length === 0) {
-        return { message: "Complete Pomodoro sessions to get analysis", patterns: [] };
+  try {
+    const [pomodoroData, weatherData] = await Promise.all([
+      getStoredData('pomodoroHistory') || [],
+      getStoredData('weatherHistory') || []
+    ]);
+
+    if (!pomodoroData.length) {
+      return { 
+        message: "Complete Pomodoro sessions to get analysis", 
+        patterns: [] 
+      };
     }
-    
+
     const patterns = findPomodoroPatterns(pomodoroData, weatherData);
     return {
-        message: patterns.length > 0 
-            ? "We found patterns in your Pomodoro sessions" 
-            : "Keep using Pomodoros to discover patterns",
-        patterns
+      message: patterns.length 
+        ? "We found patterns in your Pomodoro sessions" 
+        : "Keep using Pomodoros to discover patterns",
+      patterns
     };
+  } catch (error) {
+    console.error("Pomodoro analysis failed:", error);
+    return fallbackResponse("Error analyzing Pomodoro sessions");
+  }
 }
 
 export async function generateAISuggestions(context) {
-    try {
-        return COHERE_API_KEY 
-            ? await generateWithCohere(context) 
-            : HF_API_KEY 
-                ? await generateWithHuggingFace(context) 
-                : generateLocalSuggestions(context);
-    } catch (e) {
-        console.error("AI suggestion error:", e);
-        return generateLocalSuggestions(context);
+  try {
+    // Validate context structure
+    if (!context?.weather || !context?.productivity) {
+      throw new Error("Invalid context format");
     }
+
+    // Try APIs in order of preference
+    if (AI_CONFIG.cohere.apiKey) {
+      return await callAIAPI('cohere', context);
+    }
+    if (AI_CONFIG.huggingface.apiKey) {
+      return await callAIAPI('huggingface', context);
+    }
+    return generateLocalSuggestions(context);
+  } catch (error) {
+    console.error("AI suggestion failed:", error);
+    return generateLocalSuggestions(context);
+  }
 }
 
-// Helper functions
-function findCorrelations(weather, productivity) {
-    const tempGroups = groupDataByTemperature(weather, productivity);
-    const conditionGroups = groupDataByCondition(weather, productivity);
-    const timeGroups = groupDataByTime(productivity);
-    
-    const correlations = [];
-    
-    // Temperature correlations
-    for (const [range, data] of Object.entries(tempGroups)) {
-        if (data.length >= 3) {
-            const avgScore = calculateAverage(data, 'productivityScore');
-            if (avgScore > 75) {
-                correlations.push(`Higher productivity (${Math.round(avgScore)}%) when temperature is ${range}`);
-            } else if (avgScore < 50) {
-                correlations.push(`Lower productivity (${Math.round(avgScore)}%) when temperature is ${range}`);
-            }
-        }
-    }
-    
-    // Weather condition correlations
-    for (const [condition, data] of Object.entries(conditionGroups)) {
-        if (data.length >= 3) {
-            const avgScore = calculateAverage(data, 'productivityScore');
-            if (avgScore > 75 || avgScore < 50) {
-                correlations.push(`Productivity ${avgScore > 75 ? 'peaks' : 'drops'} during ${condition} weather`);
-            }
-        }
-    }
-    
-    // Time of day correlations
-    for (const [time, data] of Object.entries(timeGroups)) {
-        if (data.length >= 3) {
-            const avgScore = calculateAverage(data, 'productivityScore');
-            if (avgScore > 75 || avgScore < 50) {
-                correlations.push(`${Math.round(avgScore)}% productivity in the ${time}`);
-            }
-        }
-    }
-    
-    return correlations.length > 0 ? correlations : ["No strong correlations found yet"];
+// API Communication
+async function callAIAPI(provider, context) {
+  const config = AI_CONFIG[provider];
+  if (!config?.apiKey) throw new Error(`${provider} API not configured`);
+
+  const payload = provider === 'cohere'
+    ? buildCoherePayload(context)
+    : buildHuggingFacePayload(context);
+
+  const response = await fetch(config.endpoint, {
+    method: "POST",
+    headers: {
+      "Authorization": `Bearer ${config.apiKey}`,
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify(provider === 'cohere' ? {
+      ...payload,
+      max_tokens: 100,
+      temperature: 0.7
+    } : payload)
+  });
+
+  if (!response.ok) {
+    throw new Error(`${provider} API request failed: ${response.status}`);
+  }
+
+  const data = await response.json();
+  return parseAISuggestions(
+    provider === 'cohere' ? data.generations[0].text : data[0].generated_text
+  );
 }
+
+// Data Processing
+function findCorrelations(weather = [], productivity = []) {
+  const validPairs = weather
+    .map((w, i) => ({ weather: w, productivity: productivity[i] }))
+    .filter(pair => pair.weather && pair.productivity);
+
+  if (validPairs.length < 3) return [];
+
+  const correlations = [
+    ...analyzeTemperaturePatterns(validPairs),
+    ...analyzeConditionPatterns(validPairs),
+    ...analyzeTimePatterns(validPairs)
+  ];
+
+  return correlations.length ? correlations : ["No strong correlations found"];
+}
+
+function analyzeTemperaturePatterns(data) {
+  const groups = {
+    'cold (<10°C)': { sum: 0, count: 0 },
+    'cool (10-20°C)': { sum: 0, count: 0 },
+    'warm (20-30°C)': { sum: 0, count: 0 },
+    'hot (>30°C)': { sum: 0, count: 0 }
+  };
+
+  data.forEach(({ weather, productivity }) => {
+    const temp = weather.temp;
+    if (temp < 10) updateGroup(groups['cold (<10°C)'], productivity);
+    else if (temp <= 20) updateGroup(groups['cool (10-20°C)'], productivity);
+    else if (temp <= 30) updateGroup(groups['warm (20-30°C)'], productivity);
+    else updateGroup(groups['hot (>30°C)'], productivity);
+  });
+
+  return Object.entries(groups)
+    .filter(([_, { count }]) => count >= 3)
+    .map(([range, { sum, count }]) => {
+      const avg = Math.round(sum / count);
+      return avg > 75 ? `High productivity (${avg}%) at ${range}`
+           : avg < 50 ? `Low productivity (${avg}%) at ${range}`
+           : null;
+    })
+    .filter(Boolean);
+}
+
+// Helper Functions
+function updateGroup(group, { productivityScore = 0 }) {
+  group.sum += productivityScore;
+  group.count++;
+}
+
+function buildCoherePayload(context) {
+  return {
+    prompt: `Give 3 productivity suggestions based on:
+- Current weather: ${context.weather.conditions} (${context.weather.temp}°C)
+- Recent productivity: ${context.productivity.score}/100
+- Focus duration: ${context.productivity.focusedTime} minutes
+Suggestions:`,
+    model: AI_CONFIG.cohere.model
+  };
+}
+
+function buildHuggingFacePayload(context) {
+  return {
+    inputs: `Provide 3 concise tips for ${context.timeOfDay} work during ${context.weather.conditions} weather:`
+  };
+}
+
+function insufficientDataResponse() {
+  return {
+    message: "Collect more data to generate insights",
+    tips: ["Use the app for a few days to see patterns"],
+    correlations: []
+  };
+}
+
+function fallbackResponse(message) {
+  return {
+    message,
+    tips: ["Try refreshing your data", "Check your network connection"],
+    correlations: []
+  };
+}
+
+// ... (keep existing groupDataByCondition, groupDataByTime, 
+// findPomodoroPatterns, and other utility functions)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+// Helper functions
+
 
 function findPomodoroPatterns(pomodoroData, weatherData) {
     const patterns = [];

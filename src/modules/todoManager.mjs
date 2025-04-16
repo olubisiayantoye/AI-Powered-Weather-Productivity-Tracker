@@ -1,7 +1,14 @@
-// In todoManager.mjs
 import { getProductivityData } from './productivityTracker.mjs';
 import { getCurrentWeather } from './weatherTracker.mjs';
 import { generateAISuggestions } from './aiAnalyzer.mjs';
+
+// Task categories for contextual suggestions
+const TASK_CATEGORIES = {
+  focus: ['Deep work session', 'Code review', 'Write documentation'],
+  creative: ['Brainstorm ideas', 'Design mockups', 'Plan project'],
+  admin: ['Reply to emails', 'Organize files', 'Schedule meetings'],
+  break: ['Take a walk', 'Meditate', 'Hydrate']
+};
 
 export function initTodoManager() {
     renderTodoUI();
@@ -16,7 +23,16 @@ function renderTodoUI() {
             <div class="todo-input">
                 <input type="text" id="new-todo" placeholder="Add a task...">
                 <button id="add-todo">Add</button>
-                <button id="ai-suggest">AI Suggest Tasks</button>
+                <button id="ai-suggest">Get Smart Suggestions</button>
+            </div>
+            <div class="suggestion-filters">
+                <select id="task-category">
+                    <option value="auto">Auto-suggest</option>
+                    <option value="focus">Focus Tasks</option>
+                    <option value="creative">Creative Work</option>
+                    <option value="admin">Administrative</option>
+                    <option value="break">Break Activities</option>
+                </select>
             </div>
             <ul id="todo-list"></ul>
             <div class="todo-stats">
@@ -26,6 +42,166 @@ function renderTodoUI() {
     `;
     document.getElementById('app').insertAdjacentHTML('beforeend', html);
 }
+
+async function suggestAITasks() {
+    const category = document.getElementById('task-category').value;
+    const weather = await getCurrentWeather();
+    const productivity = await getProductivityData();
+    const todos = JSON.parse(localStorage.getItem('todos')) || [];
+    
+    // Build context with existing tasks
+    const context = {
+        weather: {
+            conditions: weather?.conditions || 'unknown',
+            temp: weather?.temp || 20
+        },
+        productivity: {
+            score: productivity?.productivityScore || 50,
+            focusedTime: productivity?.focusedTime || 0,
+            currentTasks: todos.map(t => t.text)
+        },
+        time: new Date().toLocaleTimeString(),
+        preferredCategory: category !== 'auto' ? category : null
+    };
+
+    try {
+        let suggestions;
+        
+        if (category !== 'auto') {
+            // Use predefined categories for consistent suggestions
+            suggestions = TASK_CATEGORIES[category] || [];
+        } else {
+            // Get AI suggestions with context about existing tasks
+            const result = await generateAISuggestions(context);
+            suggestions = result.suggestions;
+            
+            // Filter out tasks already in the list
+            suggestions = suggestions.filter(suggestion => 
+                !todos.some(todo => 
+                    todo.text.toLowerCase().includes(suggestion.toLowerCase())
+                )
+            );
+        }
+
+        if (suggestions.length > 0) {
+            showAISuggestions(suggestions);
+        } else {
+            alert("No new suggestions available. Try a different category.");
+        }
+    } catch (error) {
+        console.error("AI suggestion failed:", error);
+        // Fallback to category-based suggestions
+        const fallbackCategory = category === 'auto' ? 'focus' : category;
+        showAISuggestions(TASK_CATEGORIES[fallbackCategory] || []);
+    }
+}
+
+// Enhanced suggestion display with task type icons
+function showAISuggestions(suggestions) {
+    const modal = document.createElement('div');
+    modal.className = 'ai-suggest-modal';
+    modal.innerHTML = `
+        <div class="modal-content">
+            <h3><i class="icon-bulb"></i> Suggested Tasks</h3>
+            <ul class="suggestion-list">
+                ${suggestions.map((suggestion, index) => `
+                    <li>
+                        <input type="checkbox" id="suggestion-${index}">
+                        <label for="suggestion-${index}">
+                            <span class="task-text">${suggestion}</span>
+                        </label>
+                    </li>
+                `).join('')}
+            </ul>
+            <div class="modal-actions">
+                <button id="add-suggestions">Add Selected</button>
+                <button id="close-modal">Close</button>
+            </div>
+        </div>
+    `;
+
+    document.body.appendChild(modal);
+
+    // Close modal handler
+    modal.querySelector('#close-modal').addEventListener('click', () => modal.remove());
+
+    // Add selected tasks handler
+    modal.querySelector('#add-suggestions').addEventListener('click', () => {
+        const checkboxes = modal.querySelectorAll('input[type="checkbox"]');
+        const todos = JSON.parse(localStorage.getItem('todos')) || [];
+        
+        checkboxes.forEach(checkbox => {
+            if (checkbox.checked) {
+                const text = checkbox.nextElementSibling.querySelector('.task-text').textContent;
+                if (!todos.some(todo => todo.text === text)) {
+                    todos.push({ text, completed: false });
+                }
+            }
+        });
+
+        localStorage.setItem('todos', JSON.stringify(todos));
+        renderTodoList(todos);
+        modal.remove();
+    });
+}
+
+// ... (keep existing loadTodos, renderTodoList, setupEventListeners, 
+// addTodo, and handleTodoActions functions unchanged)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+// In todoManager.mjs
+
+
+
+
 
 async function loadTodos() {
     const todos = JSON.parse(localStorage.getItem('todos')) || [];
@@ -87,76 +263,4 @@ function handleTodoActions(e) {
     }
 }
 
-async function suggestAITasks() {
-    const weather = getCurrentWeather();
-    const productivity = getProductivityData();
-    
-    const context = {
-        weather: {
-            conditions: weather?.conditions || 'unknown',
-            temp: weather?.temp || 20
-        },
-        productivity: {
-            score: productivity?.productivityScore || 50,
-            focusedTime: productivity?.focusedTime || 0
-        },
-        time: new Date().toLocaleTimeString(),
-        date: new Date().toLocaleDateString()
-    };
-    
-    try {
-        const { suggestions } = await generateAISuggestions(context);
-        showAISuggestions(suggestions);
-    } catch (error) {
-        alert("AI suggestions unavailable. Using fallback suggestions.");
-        const { suggestions } = generateLocalSuggestions(context);
-        showAISuggestions(suggestions);
-    }
-}
 
-function showAISuggestions(suggestions) {
-    const modal = document.createElement('div');
-    modal.className = 'ai-suggest-modal';
-    modal.innerHTML = `
-        <div class="modal-content">
-            <h3>AI Task Suggestions</h3>
-            <ul>
-                ${suggestions.map(s => `<li>${s}</li>`).join('')}
-            </ul>
-            <div class="modal-actions">
-                <button id="add-suggestions">Add Selected</button>
-                <button id="close-modal">Close</button>
-            </div>
-        </div>
-    `;
-    
-    document.body.appendChild(modal);
-    
-    // Add event listeners
-    modal.querySelector('#close-modal').addEventListener('click', () => {
-        modal.remove();
-    });
-    
-    modal.querySelector('#add-suggestions').addEventListener('click', () => {
-        const selected = Array.from(modal.querySelectorAll('input[type="checkbox"]:checked'))
-            .map(el => el.parentElement.textContent.trim());
-        
-        const todos = JSON.parse(localStorage.getItem('todos')) || [];
-        selected.forEach(text => {
-            if (!todos.some(t => t.text === text)) {
-                todos.push({ text, completed: false });
-            }
-        });
-        
-        localStorage.setItem('todos', JSON.stringify(todos));
-        renderTodoList(todos);
-        modal.remove();
-    });
-    
-    // Add checkboxes to each suggestion
-    modal.querySelectorAll('li').forEach(li => {
-        const checkbox = document.createElement('input');
-        checkbox.type = 'checkbox';
-        li.prepend(checkbox);
-    });
-}

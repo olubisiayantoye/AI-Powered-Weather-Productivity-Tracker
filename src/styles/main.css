@@ -346,3 +346,13 @@ button:hover {
     margin-top: 15px;
 }
 
+.suggestion-filters {
+    margin: 10px 0;
+}
+.suggestion-filters select {
+    padding: 8px;
+    border-radius: 4px;
+}
+.suggestion-list li {
+    padding: 8px 0;
+}
