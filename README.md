@@ -9,13 +9,13 @@ A smart dashboard that correlates weather conditions with user productivity patt
 
 Key Features
 1. Core Features
-Weather-Productivity Correlation: Identifies how temperature, humidity, and weather conditions affect focus levels.
+a. Weather-Productivity Correlation: Identifies how temperature, humidity, and weather conditions affect focus levels.
 
-AI-Powered Insights: Generates personalized suggestions using heuristic analysis and optional AI APIs (Cohere/Hugging Face).
+b. AI-Powered Insights: Generates personalized suggestions using heuristic analysis and optional AI APIs (Cohere/Hugging Face).
 
-Pomodoro Timer: Integrated focus timer with smart break recommendations based on current conditions.
+c. Pomodoro Timer: Integrated focus timer with smart break recommendations based on current conditions.
 
-Activity Tracking: Logs app/website usage and idle time via ActivityWatch integration.
+d. Activity Tracking: Logs app/website usage and idle time via ActivityWatch integration.
 
 2. Dashboard Views
 Real-Time Snapshot: Current weather + productivity metrics.

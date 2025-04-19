@@ -23,7 +23,7 @@
             <button id="nav-settings" class="nav-button">Settings</button>
         </div>
     </nav>
-
+    <!--div id="insights-container" class="hidden"></div-->
     <main id="app" class="app-container">
         <!-- Dynamic content will be loaded here -->
         <div class="loading-message">Loading application...</div>
@@ -40,11 +40,31 @@
             import('./modules/logbookView.mjs').then(module => module.renderLogbook());
         });
         
-        document.getElementById('nav-insights').addEventListener('click', () => {
+      /*ocument.getElementById('nav-insights').addEventListener('click', () => {
             import('./modules/insightFeed.mjs').then(module => {
                 module.generateInsights().then(insights => module.displayInsights(insights));
             });
         });
+
+       }*/
+
+
+       document.getElementById('nav-insights').addEventListener('click', async () => {
+        try {
+            // Show loading state
+           // const container = document.getElementById('insights-container');
+            //container.classList.remove('hidden');
+           // container.innerHTML = '<div class="loading">Loading insights...</div>';
+            
+            const { generateInsights, displayInsights } = await import('./modules/insightFeed.mjs');
+            const insights = await generateInsights();
+            displayInsights(insights);
+        } catch (error) {
+            console.error('Error loading insights:', error);
+            const container = document.getElementById('insights-container');
+            container.innerHTML = '<div class="error">Failed to load insights. Please try again.</div>';
+        }
+    });
 
         document.getElementById('nav-settings').addEventListener('click', () => {
             import('./modules/settingsView.mjs').then(module => module.renderSettings());
